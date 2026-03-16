@@ -65,3 +65,42 @@ What is AWS Identity Center (successor to AWS SSO)?
 - Supports multi-account access (e.g., dev, staging, prod) without switching roles manually.
 - When to Use IAM Identity Center? For employees or contractors who need to log in to the AWS Console or SaaS apps (e.g., Salesforce). For centralized access management across multiple AWS accounts. For enforcing SSO and MFA for human users.
 - For programmatic access use STS
+
+
+--------------------------------------
+
+# Zero Trust Networks on AWS
+
+Principles:
+
+1. Identity and Access Management (IAM).
+
+- MFA
+- Least-privilege access
+- RBAC. To avoid role explosion but keep fine-grained access control, use ABAC (Attribute-Based Access Control).
+- Look above for more details.
+
+2. Network Segmentation
+
+- create VPC (don't use the default one)
+- Isolate resources in subnets. Limit access through Security Groups and Network ACLs
+
+3. Access policies
+
+- Consider use-cases that require firewalls: workload-to-workload, client-to-workload, and workload-to-internet traffic flows
+- use AWS WAF to protect web applications (Load balancers, API Gateway, AWS CloudFront) from common exploits, malicious bot traffic, and SQL injection/XSS attacks by filtering HTTP/S traffic based on customizable rules (e.g. to restrict IP ranges)
+- granular access controls for instances and subnets via Security Groups and Network ACLs
+
+4. Automation & centralized governance
+
+- AWS Service Control Policies (SCPs) are JSON-based policies used in AWS Organizations to centrally manage maximum available permissions across multiple AWS accounts. They override IAM permissions.
+- AWS Config: monitor resources and enforce compliance. Examples: lambda_deprecated_runtime or securitygroup_egress_allportsallow_check. More examples: [github repo](https://github.com/aws-samples/aws-config-custom-policy-rule-samples)
+
+5. Monitoring
+
+- CloudTrail
+- AWS Security Hub
+- CloudWatch
+- VPC Flow Logs
+
+More advanced topics: [link](https://aws.amazon.com/de/events/reinforce/on-demand/)
