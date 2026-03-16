@@ -9,7 +9,9 @@ Lakehouse combines the best from two worlds: data lakes and relational / data wa
 - data catalog with lineage and quality scoring functionality;
 - SQL engine that allows to query files as if they relational tables.
 
-Vision in overall architecture: the lakehouse becomes a central hub that seamlessly "fan out" to specialised tooling when needed. The architecture enables plug-and-play constructs that are suited to the nature of the business: vector DB, feature stores, graph engines (SPARQL), data contracts - to validate and publish schemas upstream/downstream.
+[Vision](https://medium.com/@community_md101/the-ultimate-guide-to-choosing-the-right-data-platform-for-ai-innovation-5ffcf1d2ab99) in overall architecture: the lakehouse becomes a central hub that enables plug-and-play constructs: vector DB, feature stores (streaming and batch features), graph engines (e.g. SPARQL), data contracts (to validate and publish schemas upstream/downstream).
+
+## Main features
 
 **Columnar formats**
 
@@ -39,3 +41,17 @@ Pricing model: check not only Athena itself, but also Glue Catalog and S3 (can b
 - also has partition indexes.
 
 When you add data to S3 that is not in a location of an existing partition you have to tell Glue / Athena about it, so that Athena can find it when you run your next query. There are multiple mechanisms for that.
+
+## Patterns and lessons learned
+
+- Use S3 tables or general purpose S3 with Self-managed Iceberg - depending on your skills, capacity and priorities. Same dilemma of self-hosted vs. managed (costs, skills, control)
+- Iceberg centralizes the authorization layer using IAM; no longer have to built custom data access control layer at each data integration point.
+- in Lakehouse, developes need to understand the underlying filesystem. Potentially be familiar with diff. formats, e.g. Avro (for streaming) vs. Parquet (for storage).
+- Problem of high-cardinality --> columnar formats + partitioning
+- there are multiple mechanisms for repartitioning in Glue / Athena
+- Pricing model: when using Athena, check not only Athena itself, but also Glue Catalog and S3 (can become the main cost driver)
+- Warehouse is optimized for performance, Lakehouse - for open ecosystem and low costs --> SageMaker provides unified data access and some magic. As usually, be aware of costs.
+- ETL vs. zero-ETL vs. federation / virtualization.
+    - data gets automatically and continuously replicated from a source system to lakehouse; using change data capture (CDC) to automatically stream all new inserts, updates, and deletes from the source to the target. Use this pattern when 1) data at the source is clean, structured and contextualized; 2) or when data refinement and aggregation can occur at the target end. Transformation is performed at the target - closer to where the insights are generated.
+    - Zero-ETL integration for Aurora -> Redshift, S3 or S3 Tables
+
