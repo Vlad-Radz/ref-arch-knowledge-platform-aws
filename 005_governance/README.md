@@ -5,20 +5,30 @@
 
 You have to distinguish between:
 - identity management / authentication: IDP, Cognito User Pool, AWS Identity Center Users.
-- authorization: roles, policies, AWS Identity Center permission sets. An IAM role is enough - users do not need an IAM user to access an AWS account when using IAM Identity Center or federated access (e.g., via SAML/OIDC)
+- authorization: roles, policies, AWS Identity Center permission sets. For cross-account access: an IAM role is enough - users do not need an IAM user to access an AWS account when using IAM Identity Center or federated access (e.g., via IDP + SAML/OIDC)
 - and access mechanism (STS tokens, Cognito Identity Pool).
 
-Usage of specific resources and flows depends on scenario.
-- Does user need to authenticate in SaaS with AWS SSO service? → Identity Center
-- Does user need to access AWS resources? → Identity Center or STS or Cognito
-- You build a consumer-facing app hosted on AWS? → Cognito
-- Does script need to programmatically access AWS resources? → STS
-- Do you want rely on AWS services or use federation? → Identity Center vs. IDP like AD, Okta
+| Scenario | IAM Identity Center | Cognito | STS |
+| -------- | ------------------- | ------- | --- |
+| **Enterprise employees accessing AWS** | ✅ Ideal (SSO to AWS accounts, MFA enforcement) | ❌ Not designed for this | ✅ Used under the hood, when IAM Identity Center calls STS to generate temporary credentials for an IAM role |
+| **Developers needing access to specific AWS resources** | ✅ Yes (via permission sets) | ✅ Yes (via Identity Pools + IAM roles) | ✅ Primary solution (direct STS calls) |
+| **Consumer-facing app (e.g., mobile)** | ❌ No | ✅ Ideal (user sign-up, social logins, app auth) | ✅ Used under the hood, when Cognito Identity Pools call STS to generate temporary credentials for an IAM role |
+| **SSO for business apps (e.g., SAP)** | ✅ Yes | ❌ No | ❌ Irrelevant (STS is for AWS resources only) |
+| **Guest/unauthenticated access** (e.g. a mobile app lets users browse public content in S3 without requiring a login) | ❌ No | ✅ Yes (via Identity Pools) | ✅ Used under the hood, when Cognito calls STS to generate temporary credentials for the unauthenticated role with restricted permissions |
 
-Flows usually relevant for service integration:
-- User → [authentication via] IDP / SSO system, protocol: SAML / OIDC → map group in vendor software based on role in IDP
-- Developer → [Logs in via] IDP (Okta/Azure AD) → [Gets] JWT/OIDC token → [App/Script calls] AWS STS (AssumeRoleWithWebIdentity) → [STS returns] Temporary AWS credentials → Developer accesses S3 bucket.
-- Developer → [Logs in via] IDP (Okta/Azure AD) → IAM Identity Center → [Identity Center assigns] Permission Set (IAM Role) → [Developer gets] Temporary AWS credentials → Developer accesses S3 bucket.
+Usage of specific services and flows depends on scenario.
+- Do you want to allow a user to authenticate in a SaaS using an AWS SSO service? → AWS IAM Identity Center
+- Does user need to access AWS resources? → AWS IAM Identity Center, STS or Cognito
+- You build a consumer-facing app hosted on AWS and need authentication / authorization functionality? → Cognito
+- Does your script need to programmatically access AWS resources? → STS
+- Do you want to rely on AWS services or use federation? → AWS IAM Identity Center vs. IDP like AD or Okta
+
+Flows typical for service integration:
+- User → [authentication via] IDP / SSO system, protocol: SAML / OIDC → map group in vendor software based on role in IDP → to data inside vendor software
+- Developer → [authentication via] IDP (Okta/Azure AD) → [Gets] JWT/OIDC token → [App/Script calls] AWS STS (AssumeRoleWithWebIdentity) → [STS returns] Temporary AWS credentials → access to S3 bucket or other resources.
+- Developer → [authentication via] IDP (Okta/Azure AD) → IAM Identity Center → [Identity Center assigns] Permission Set (IAM Role) → [Developer gets] Temporary AWS credentials → access to S3 bucket or other resources.
+
+
 
 ## More details
 
@@ -41,7 +51,7 @@ One of the complex cases from my history:
 - then added to vendor software
 - and also I had to do something in Gatekeeper as reverse proxy
 
-## AWS services
+### AWS services
 What is AWS Cognito?
 - AWS Cognito can simplify the process of federating your enterprise IDP with AWS IAM, especially for developers and applications. Here’s how it fits into your scenario. AWS Cognito acts as a middle layer between your Client IDP (e.g., Okta, Azure AD) and AWS IAM. It provides: User Pools: For managing user identities and authentication (e.g., OIDC/SAML). Identity Pools: For exchanging IDP tokens (e.g., JWT) for AWS credentials via STS
 - Amazon Cognito User Pools handle authentication (sign-up/sign-in, user directories, and JWT tokens), acting as an identity provider. Cognito Identity Pools handle authorization (exchanging tokens for temporary AWS credentials to access services like S3 or DynamoDB). They are often used together: User Pool verifies who the user is, and Identity Pool determines what they can access.
@@ -55,4 +65,3 @@ What is AWS Identity Center (successor to AWS SSO)?
 - Supports multi-account access (e.g., dev, staging, prod) without switching roles manually.
 - When to Use IAM Identity Center? For employees or contractors who need to log in to the AWS Console or SaaS apps (e.g., Salesforce). For centralized access management across multiple AWS accounts. For enforcing SSO and MFA for human users.
 - For programmatic access use STS
-
